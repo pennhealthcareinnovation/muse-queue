@@ -1,0 +1,11 @@
+.git
+.dockerignore
+**/log/*
+**/logs/*
+**/tmp/*
+.env*
+**/node_modules
+npm-debug.log
+*.dockerfile
+
+**/dist
