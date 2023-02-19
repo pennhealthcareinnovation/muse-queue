@@ -6,12 +6,11 @@ import { DatabaseService } from 'src/database/database.service';
 import { QueueService } from './queue.service';
 
 class CompletedItemDto {
-  @ApiProperty() id: number
   @ApiProperty() matchedCount: number
 }
 
 @ApiTags('Queue')
-@Controller('queue')
+@Controller('/api/queue')
 export class QueueController {
   constructor(
     private queueService: QueueService
@@ -32,9 +31,10 @@ export class QueueController {
 
   @Patch('/:id/complete')
   async complete(
+    @Param('id') id: number,
     @Body() completedItem: CompletedItemDto
   ) {
-    return await this.queueService.completeitem(completedItem)
+    return await this.queueService.completeitem({ id, matchedCount: completedItem.matchedCount })
   }
 
   @Get('clearStaleLocks')
