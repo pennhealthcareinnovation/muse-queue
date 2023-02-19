@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Patch, Query, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, HttpException, HttpStatus, Param, Patch, Query, UseGuards } from '@nestjs/common';
 import { ApiParam, ApiProperty, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { queueItem } from 'src/database/database.schema';
 
@@ -26,7 +26,7 @@ export class QueueController {
     if (nextItem) {
       return nextItem
     } else {
-      return { message: 'No remaining items to take!' }
+      throw new HttpException('No remaining items to take!', HttpStatus.NO_CONTENT)
     }
   }
 

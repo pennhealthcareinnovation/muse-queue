@@ -6,8 +6,6 @@ services:
       dockerfile: ./server/server.dockerfile
       target: development
     env_file: ./.env
-    environment:
-      - POSTGRES_HOST=postgres
     ports: 
       - ${SERVER_PORT}:${SERVER_PORT}
     tty: true
