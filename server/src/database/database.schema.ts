@@ -20,6 +20,7 @@ export type Timestamp = ColumnType<Date, Date | string, Date | string>;
 export interface PublicSchema {
   batch: batch
   queueItem: queueItem
+  worker: worker
 }
 
 export interface batch {
@@ -39,7 +40,7 @@ export interface queueItem {
   expectedCount?: number
 
   lockedAt?: Timestamp
-  lockedBy?: string
+  lockedBy?: worker['name']
 
   completedAt?: Timestamp
   matchedCount?: number
@@ -48,4 +49,13 @@ export interface queueItem {
 
   createdAt: Generated<Timestamp>;
   updatedAt: Generated<Timestamp>;
+}
+
+export interface worker {
+  id: Generated<number>
+
+  name: string
+  triggerUrl: string
+  active: boolean
+  pendingStart: boolean
 }

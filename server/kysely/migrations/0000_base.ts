@@ -10,6 +10,18 @@ export async function up(db: Kysely<any>): Promise<void> {
     .execute()
 
   await db.schema
+    .createTable('worker')
+    .addColumn('id', 'serial', (col) => col.notNull().primaryKey().unique())
+    .addColumn('name', 'varchar(255)', (col) => col.notNull().unique())
+    .addColumn('triggerUrl', 'varchar', (col) => col.notNull().unique())
+    .addColumn('active', 'boolean')
+    .addColumn('pendingStart', 'boolean')
+
+    .addColumn('createdAt', 'timestamp', (col) => col.defaultTo(sql`CURRENT_TIMESTAMP`))
+    .addColumn('updatedAt', 'timestamp', (col) => col.defaultTo(sql`CURRENT_TIMESTAMP`))
+    .execute()
+
+  await db.schema
     .createTable('queueItem')
     .addColumn('id', 'serial', (col) => col.primaryKey())
 
@@ -20,7 +32,7 @@ export async function up(db: Kysely<any>): Promise<void> {
     .addColumn('expectedCount', 'integer')
 
     .addColumn('lockedAt', 'timestamp')
-    .addColumn('lockedBy', 'varchar(255)')
+    .addColumn('lockedBy', 'varchar(255)', (col) => col.references('worker.name').onDelete('cascade'))
 
     .addColumn('completedAt', 'timestamp')
     .addColumn('matchedCount', 'integer')
@@ -34,6 +46,7 @@ export async function up(db: Kysely<any>): Promise<void> {
 }
 
 export async function down(db: Kysely<any>): Promise<void> {
-  await db.schema.dropTable('batch').ifExists().execute()
   await db.schema.dropTable('queueItem').ifExists().execute()
+  await db.schema.dropTable('worker').ifExists().execute()
+  await db.schema.dropTable('batch').ifExists().execute()
 }

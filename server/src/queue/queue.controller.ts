@@ -16,17 +16,11 @@ export class QueueController {
     private queueService: QueueService
   ) { }
 
-  @Get('nextLock')
-  @ApiQuery({ name: 'lockedBy', required: false })
-  async nextLock(
-    @Query('lockedBy') lockedBy?: string
+  @Get('/:id')
+  async get(
+    @Param('id') id: number
   ) {
-    const nextItem = await this.queueService.lockNextItem({ lockedBy })
-    if (nextItem) {
-      return nextItem
-    } else {
-      throw new HttpException('No remaining items to take!', HttpStatus.NO_CONTENT)
-    }
+    return await this.queueService.getItem(id)
   }
 
   @Patch('/:id/complete')

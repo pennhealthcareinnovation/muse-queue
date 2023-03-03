@@ -21,7 +21,7 @@ const {
   POSTGRES_USER: user,
   POSTGRES_PASSWORD: password
 } = process.env
-const POOL_CONFIG: PoolConfig = { host, database, user, password, ssl: { rejectUnauthorized: false } }
+const POOL_CONFIG: PoolConfig = { host, database, user, password }
 if (!POOL_CONFIG.host || !POOL_CONFIG.database || !POOL_CONFIG.user || !POOL_CONFIG.password) {
   throw Error(`Unable to load database parameters!`)
 }
