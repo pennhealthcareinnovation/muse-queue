@@ -15,7 +15,7 @@ interface CompleteItem {
 }
 
 interface QueueEvent {
-  event: 'LOCK_ITEM' | 'COMPLETED' | 'EMPTY_QUEUE' | 'CLEAERED_STALE_LOCKS' | 'NO_FREE_WORKERS'
+  event: 'LOCK_ITEM' | 'COMPLETED' | 'EMPTY_QUEUE' | 'CLEAERED_STALE_LOCKS' | 'NO_FREE_WORKERS' | 'RELEASE_ITEM'
   queueItem?: any
 }
 
@@ -106,6 +106,17 @@ export class QueueService {
 
     this.emitEvent({ event: 'COMPLETED', queueItem: completed })
     return completed
+  }
+
+  async releaseItem(id: UpdateType<queueItem['id']>) {
+    const releasedItem = await this.db.updateTable('queueItem')
+      .where('queueItem.id', '=', id)
+      .set({ lockedAt: null, lockedBy: null })
+      .returningAll()
+      .executeTakeFirstOrThrow()
+
+    this.emitEvent({ event: 'RELEASE_ITEM', queueItem: releasedItem })
+    return releasedItem
   }
 
   /**
