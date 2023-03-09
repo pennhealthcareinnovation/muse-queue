@@ -1,9 +1,13 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { Interval } from '@nestjs/schedule';
-import { SelectType, sql, UpdateKeys, UpdateType } from 'kysely';
+import { SelectType, sql, UpdateKeys, UpdateObject, UpdateType } from 'kysely';
+// import path from 'path';
+const path = require('path')
 
-import { queueItem, worker } from 'src/database/database.schema';
+import { batch, PublicSchema, queueItem, worker } from 'src/database/database.schema';
 import { DatabaseService } from 'src/database/database.service';
+import { DatabricksService } from 'src/external/databricks.service';
 
 interface LockNextItem {
   lockedBy?: SelectType<queueItem['lockedBy']>
@@ -15,21 +19,26 @@ interface CompleteItem {
 }
 
 interface QueueEvent {
-  event: 'LOCK_ITEM' | 'COMPLETED' | 'EMPTY_QUEUE' | 'CLEAERED_STALE_LOCKS' | 'NO_FREE_WORKERS' | 'RELEASE_ITEM'
+  event: 'LOCK_ITEM' | 'COMPLETED' | 'EMPTY_QUEUE' | 'CLEAERED_STALE_LOCKS' | 'NO_FREE_WORKERS' | 'RELEASE_ITEM' | 'GET_ITEM'
   queueItem?: any
 }
 
-const LOCK_TIMEOUT_MINUTES = 15
-const QUEUE_BEAT_SECONDS = 30
+const LOCK_TIMEOUT_MINUTES = 20
+const QUEUE_BEAT_SECONDS = 15
 const WORKER_CONCURRENCY = 1
 
 @Injectable()
 export class QueueService {
   constructor(
-    private db: DatabaseService
-  ) { }
+    private config: ConfigService,
+    private db: DatabaseService,
+    private databricks: DatabricksService
+  ) {
+    this.queueUrl = this.config.getOrThrow<string>('QUEUE_URL')
+  }
 
   private readonly logger = new Logger(QueueService.name);
+  private queueUrl: string
 
   private emitEvent(event: QueueEvent) { this.logger.log(JSON.stringify(event)) }
 
@@ -62,6 +71,7 @@ export class QueueService {
         .where('completedAt', 'is', null)
         .where('lockedAt', 'is', null)
         .select('id')
+        .orderBy('queueItem.expectedCount', 'desc')
         .executeTakeFirst()
 
       if (!preLockNextItem) {
@@ -83,7 +93,7 @@ export class QueueService {
       const invocation = await fetch(worker.triggerUrl as string, {
         method: 'POST',
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ "queueItemId": item.id })
+        body: JSON.stringify({ "queueItemId": item.id, "queueUrl": this.queueUrl })
       })
       this.emitEvent({ event: 'LOCK_ITEM', queueItem: item })
       return item
@@ -91,10 +101,12 @@ export class QueueService {
   }
 
   async getItem(id: SelectType<queueItem['id']>) {
-    return this.db.selectFrom('queueItem')
+    const queueItem = await this.db.selectFrom('queueItem')
       .where('queueItem.id', '=', id)
       .selectAll()
       .executeTakeFirstOrThrow()
+    this.emitEvent({ event: 'GET_ITEM', queueItem })
+    return queueItem
   }
 
   async completeitem({ id, matchedCount }: CompleteItem) {
@@ -117,6 +129,41 @@ export class QueueService {
 
     this.emitEvent({ event: 'RELEASE_ITEM', queueItem: releasedItem })
     return releasedItem
+  }
+
+  async loadBatchExpected(batchId: SelectType<batch['id']>) {
+    const items = await this.db.selectFrom('queueItem')
+      .where('queueItem.batchId', '=', batchId)
+      .select(['batchId', 'site', 'uid'])
+      .execute()
+    const secondaryIds = items.map(i => `'${i.uid}'`).join(', ')
+
+    const query = `
+      select
+        demo.Site as site
+        ,demo.SecondaryId as uid
+        ,count(*) as expectedCount
+      from
+        (
+          select * from cardiology_analytics.raw_muse_hup.tsttestdemographics
+          union all select * from cardiology_analytics.raw_muse_pah.tsttestdemographics
+          union all select * from cardiology_analytics.raw_muse_ppmc.tsttestdemographics
+        ) demo
+      where
+        demo.SecondaryId in (${secondaryIds})
+        group by demo.Site, demo.SecondaryId
+    `
+    const expectedCounts: any = await this.databricks.query(query)
+
+    for (const item of items) {
+      const expectedCount = expectedCounts.find(e => e.site == item.site && e.uid == item.uid)?.expectedCount ?? 0
+      await this.db.updateTable('queueItem')
+        .where('queueItem.batchId', '=', item.batchId)
+        .where('queueItem.site', '=', item.site)
+        .where('queueItem.uid', '=', item.uid)
+        .set({ expectedCount })
+        .execute()
+    }
   }
 
   /**

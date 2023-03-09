@@ -9,4 +9,6 @@ export default () => ({
   DATABRICKS_HOSTNAME: process.env?.DATABRICKS_HOSTNAME,
   DATABRICKS_HTTP_PATH: process.env?.DATABRICKS_HTTP_PATH,
   DATABRICKS_TOKEN: process.env?.DATABRICKS_TOKEN,
+
+  QUEUE_URL: process.env?.QUEUE_URL,
 })

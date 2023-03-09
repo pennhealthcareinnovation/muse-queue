@@ -6,6 +6,7 @@ import { AppController } from './app.controller';
 import { DatabaseModule } from './database/database.module';
 import { QueueModule } from './queue/queue.module';
 import { AuthModule } from './auth/auth.module';
+import { ExternalModule } from './external/external.module';
 
 @Module({
   imports: [
@@ -13,7 +14,8 @@ import { AuthModule } from './auth/auth.module';
     ScheduleModule.forRoot(),
     DatabaseModule,
     QueueModule,
-    AuthModule
+    AuthModule,
+    ExternalModule
   ],
   controllers: [AppController],
   providers: [],

@@ -1,4 +1,4 @@
-import { Body, Controller, Get, HttpException, HttpStatus, Param, Patch, Query, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, HttpException, HttpStatus, Param, Patch, Post, Query, UseGuards } from '@nestjs/common';
 import { ApiParam, ApiProperty, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { queueItem } from 'src/database/database.schema';
 
@@ -39,5 +39,12 @@ export class QueueController {
   @Get('clearStaleLocks')
   async clearStaleLocks() {
     return await this.queueService.clearStaleLocks()
+  }
+
+  @Post('loadBatchExpected/:batchId')
+  async loadBatchExpected(
+    @Param('batchId') batchId: number
+  ) {
+    return await this.queueService.loadBatchExpected(batchId)
   }
 }

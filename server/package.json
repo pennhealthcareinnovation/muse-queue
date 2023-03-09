@@ -23,6 +23,7 @@
     "seed": "ts-node-esm --project kysely/tsconfig.kysely.json kysely/entry.ts seed"
   },
   "dependencies": {
+    "@databricks/sql": "^1.1.1",
     "@nestjs/common": "^9.0.0",
     "@nestjs/config": "^2.3.1",
     "@nestjs/core": "^9.0.0",
