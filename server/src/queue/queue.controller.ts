@@ -47,4 +47,11 @@ export class QueueController {
   ) {
     return await this.queueService.loadBatchExpected(batchId)
   }
+
+  @Post('invokeWorker/:workerName')
+  async invokeWorker(
+    @Param('workerName') workerName: string
+  ) {
+    return await this.queueService.invokeWorkerOnNext(workerName)
+  }
 }

@@ -47,7 +47,7 @@ export class QueueService {
     const activity = await this.workerActivity()
     const nextAvailableWorkerName = activity.filter(a => a.activeItems < WORKER_CONCURRENCY)?.[0]?.name
     if (!nextAvailableWorkerName) {
-      this.emitEvent({ event: 'NO_FREE_WORKERS' })
+      // this.emitEvent({ event: 'NO_FREE_WORKERS' })
     } else {
       const lockedNextItem = await this.invokeWorkerOnNext(nextAvailableWorkerName)
     }
