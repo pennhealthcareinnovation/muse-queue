@@ -87,14 +87,17 @@ export class QueueService {
 
       const worker = await trx.selectFrom('worker')
         .where('worker.name', '=', workerName)
-        .select('worker.triggerUrl')
+        .select(['worker.triggerUrl', 'worker.name'])
         .executeTakeFirstOrThrow()
 
       const invocation = await fetch(worker.triggerUrl as string, {
         method: 'POST',
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ "queueItemId": item.id, "queueUrl": this.queueUrl })
+        body: JSON.stringify({ "queueItemId": item.id, "queueUrl": this.queueUrl, "workerName": worker.name })
       })
+      if (invocation.status >= 400) {
+        throw Error(`Worker invocation failed: ${await invocation.text()}`)
+      }
       this.emitEvent({ event: 'LOCK_ITEM', queueItem: item })
       return item
     })
@@ -154,6 +157,7 @@ export class QueueService {
         group by demo.Site, demo.SecondaryId
     `
     const expectedCounts: any = await this.databricks.query(query)
+    console.debug(expectedCounts)
 
     for (const item of items) {
       const expectedCount = expectedCounts.find(e => e.site == item.site && e.uid == item.uid)?.expectedCount ?? 0
